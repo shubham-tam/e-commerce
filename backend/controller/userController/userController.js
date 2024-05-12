@@ -5,8 +5,10 @@ import {
     GET_USER_BY_ID,
     DELETE_USER_BY_ID,
     CHECK_USER_EMAIL_EXISTS,
+    INSERT_IMAGE_DATA_USER_TABLE,
 } from './userQueries.js';
 import pool from '../../config/db.js';
+import { cloudinary } from '../../config/cloudinary.js';
 import { generateUniqueUUID, hashPassword } from '../../utils/index.js';
 
 const registerUser = expressAsyncHandler(async (req, res) => {
@@ -29,7 +31,7 @@ const registerUser = expressAsyncHandler(async (req, res) => {
         }
 
         const id = generateUniqueUUID();
-        const hashedPassword = await hashPassword(password);
+        const hashedPassword = password ? await hashPassword(password) : '';
 
         await pool.query(ADD_NEW_USER, [
             id,
@@ -43,7 +45,31 @@ const registerUser = expressAsyncHandler(async (req, res) => {
             payment_mode,
         ]);
 
-        res.status(201).send('User created successfully');
+        const getUserById = await pool.query(GET_USER_BY_ID, [id]);
+
+        if (getUserById?.rows?.length === 0) {
+            return res.status(400).send({ message: 'User does not exist' });
+        }
+
+        if (getUserById?.rows?.length >= 1) {
+            cloudinary?.uploader?.upload(req?.files?.[0]?.path, function (err, result) {
+                if (err) {
+                    console.log(err);
+                    return res.status(500).json({
+                        success: false,
+                        message: 'Error',
+                    });
+                }
+
+                if (result) {
+                    // update db with result json
+                    pool.query(INSERT_IMAGE_DATA_USER_TABLE, [result, id], err => {
+                        if (err) throw err;
+                    });
+                    res.status(201).send('User created successfully');
+                }
+            });
+        }
     } catch (error) {
         console.error('Error:', error);
         res.status(500).send('Internal Server Error');

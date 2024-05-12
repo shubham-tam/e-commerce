@@ -11,4 +11,12 @@ const GET_USER_BY_ID = `SELECT * FROM "${process.env.USER_TABLE}" WHERE id = $1`
 
 const DELETE_USER_BY_ID = `DELETE FROM "${process.env.USER_TABLE}" where id = $1`;
 
-export { ADD_NEW_USER, CHECK_USER_EMAIL_EXISTS, GET_USER_BY_ID, DELETE_USER_BY_ID };
+const INSERT_IMAGE_DATA_USER_TABLE = `UPDATE "${process.env.USER_TABLE}" SET image = $1 where id = $2`;
+
+export {
+    ADD_NEW_USER,
+    CHECK_USER_EMAIL_EXISTS,
+    GET_USER_BY_ID,
+    DELETE_USER_BY_ID,
+    INSERT_IMAGE_DATA_USER_TABLE,
+};
