@@ -2,7 +2,7 @@ import expressAsyncHandler from 'express-async-handler';
 
 import pool from '../../config/db.js';
 import { matchPassword } from '../../utils/index.js';
-import { CHECK_USER_EMAIL_EXISTS } from './authQueries.js';
+import { CHECK_USER_EMAIL_EXISTS } from '../../queries/index.js';
 
 const authUser = expressAsyncHandler(async (req, res) => {
     const { email, password } = req?.body;

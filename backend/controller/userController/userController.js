@@ -5,8 +5,8 @@ import {
     GET_USER_BY_ID,
     DELETE_USER_BY_ID,
     CHECK_USER_EMAIL_EXISTS,
-    INSERT_IMAGE_DATA_USER_TABLE,
-} from './userQueries.js';
+    INSERT_IMAGE_PUBLIC_ID_TO_USER_TABLE,
+} from '../../queries/index.js';
 import pool from '../../config/db.js';
 import { cloudinary } from '../../config/cloudinary.js';
 import { generateUniqueUUID, hashPassword } from '../../utils/index.js';
@@ -62,10 +62,14 @@ const registerUser = expressAsyncHandler(async (req, res) => {
                 }
 
                 if (result) {
-                    // update db with result json
-                    pool.query(INSERT_IMAGE_DATA_USER_TABLE, [result, id], err => {
-                        if (err) throw err;
-                    });
+                    // update db with result public_id
+                    pool.query(
+                        INSERT_IMAGE_PUBLIC_ID_TO_USER_TABLE,
+                        [result?.public_id, id],
+                        err => {
+                            if (err) throw err;
+                        }
+                    );
                     res.status(201).send('User created successfully');
                 }
             });
@@ -119,7 +123,7 @@ const getUserById = expressAsyncHandler(async (req, res) => {
     const id = req?.params?.id;
 
     try {
-        pool.query(GET_USER_BY_ID, [id], (err, results) => {
+        pool.query(GET_USER_BY_ID, [id], async (err, results) => {
             if (err) {
                 console.error('Error executing query:', err);
                 return res.status(500).json({ error: 'Internal server error' });
@@ -130,7 +134,44 @@ const getUserById = expressAsyncHandler(async (req, res) => {
                 return rest;
             });
 
-            res.status(200).json({ data: filteredData?.[0] });
+            let formData = { ...filteredData?.[0] };
+
+            if (filteredData?.[0]?.image_id) {
+                try {
+                    const imageDetails = await cloudinary.api.resource(filteredData?.[0]?.image_id);
+
+                    const {
+                        asset_id,
+                        public_id,
+                        format,
+                        resource_type,
+                        bytes,
+                        width,
+                        height,
+                        url,
+                        secure_url,
+                    } = imageDetails;
+
+                    const image_id = {
+                        asset_id,
+                        public_id,
+                        format,
+                        resource_type,
+                        bytes,
+                        width,
+                        height,
+                        url,
+                        secure_url,
+                    };
+
+                    formData.image_id = image_id;
+                } catch (error) {
+                    console.error(error);
+                    // Handle error fetching image details
+                }
+            }
+
+            res.status(200).json({ data: formData });
         });
     } catch (error) {
         console.error('Error:', error);
