@@ -1,8 +1,7 @@
 import expressAsyncHandler from 'express-async-handler';
 
-import pool from '../../config/db.js';
 import { matchPassword } from '../../utils/index.js';
-import { CHECK_USER_EMAIL_EXISTS } from '../../queries/index.js';
+import { checkIfEmailExists } from '../../helpers/index.js';
 
 const authUser = expressAsyncHandler(async (req, res) => {
     const { email, password } = req?.body;
@@ -13,20 +12,23 @@ const authUser = expressAsyncHandler(async (req, res) => {
     }
 
     try {
-        const loggedInUser = await pool.query(CHECK_USER_EMAIL_EXISTS, [email]);
+        const [userEmail, _, emailError] = await checkIfEmailExists(req.body.email);
+        if (emailError) {
+            return res.status(500).json({ error: 'Internal server error' });
+        }
 
-        if (loggedInUser?.rows?.length === 0) {
+        if (userEmail?.rows?.length === 0) {
             return res.status(400).send({ message: 'User does not exist' });
         }
 
-        const verifyPassword = await matchPassword(password, loggedInUser?.rows?.[0]?.password);
+        const verifyPassword = await matchPassword(password, userEmail?.rows?.[0]?.password);
 
-        if (loggedInUser && verifyPassword) {
+        if (userEmail?.rows?.length > 0 && verifyPassword) {
             // generate token stuff
 
             res.status(201).json({
-                id: loggedInUser?.rows?.[0]?.id,
-                email: loggedInUser?.rows?.[0]?.email,
+                id: userEmail?.rows?.[0]?.id,
+                email: userEmail?.rows?.[0]?.email,
             });
         }
     } catch (error) {
