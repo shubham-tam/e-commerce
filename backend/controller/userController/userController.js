@@ -68,7 +68,7 @@ const updateUserById = expressAsyncHandler(async (req, res) => {
             return res.status(400).send({ message: 'User does not exist' });
         }
 
-        const [updateSuccess, updateError] = await updateUserByIdService(id, req);
+        const [_, updateError] = await updateUserByIdService(id, req);
         if (updateError) {
             return res.status(500).json({ error: 'Internal server error' });
         }
